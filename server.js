@@ -66,6 +66,17 @@ blockchain.init().catch((err) => console.error("[Blockchain] Boot error:", err.m
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
 
+  // Handle CORS preflight requests
+  if (request.method === "OPTIONS") {
+    response.writeHead(204, {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, ngrok-skip-browser-warning",
+    });
+    response.end();
+    return;
+  }
+
   if (request.method === "GET" && url.pathname === "/api/state") {
     const requesterId = url.searchParams.get("id");
     const requester = requesterId ? players.get(requesterId) : null;
