@@ -1,0 +1,17 @@
+{
+  "name": "server-factory-multiplayer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Three.js server factory game with multiplayer leaderboard",
+  "scripts": {
+    "start": "node server.js",
+    "compile": "node scripts/compile.js",
+    "deploy": "node scripts/deploy.js",
+    "setup": "node scripts/compile.js && node scripts/deploy.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "ethers": "^6.16.0",
+    "solc": "^0.8.34"
+  }
+}
