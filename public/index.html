@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Server Factory 3D Tycoon</title>
+    <link rel="icon" href="data:," />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div id="game-container">
+      <!-- Start Screen Overlay -->
+      <div id="start-screen">
+        <div class="start-panel">
+          <p class="start-kicker">Welcome Back, Operator</p>
+          <h1 class="start-title">SERVER FACTORY 3D</h1>
+          <p class="start-subtitle">
+            Build your network empire, optimize your pipelines, and race the
+            leaderboard.
+          </p>
+
+          <div class="start-actions">
+            <button id="resume-button" class="menu-button primary">
+              Resume Game
+            </button>
+            <button id="new-game-button" class="menu-button warn">
+              Start New Game
+            </button>
+            <button id="friends-button" class="menu-button">
+              Play With Friends
+            </button>
+            <button id="settings-button" class="menu-button">Settings</button>
+          </div>
+
+          <div id="friends-panel" class="menu-panel" hidden>
+            <h2>Play With Friends</h2>
+            <p class="panel-note">
+              Share this link on your network so friends can join your server.
+            </p>
+            <div class="friends-share-row">
+              <input id="invite-link-input" type="text" readonly />
+              <button id="copy-invite-button" class="small-button">Copy</button>
+            </div>
+            <p class="panel-micro">
+              Room balancing is automatic. Each room holds up to 10 players.
+            </p>
+          </div>
+
+          <div id="settings-panel" class="menu-panel" hidden>
+            <h2>Settings</h2>
+
+            <div class="settings-grid">
+              <div class="field-block">
+                <label for="player-name-input">Player Name</label>
+                <input
+                  type="text"
+                  id="player-name-input"
+                  maxlength="16"
+                  placeholder="Enter name..."
+                />
+              </div>
+
+              <div class="field-block">
+                <label for="player-color-input">Character Skin</label>
+                <div class="color-row">
+                  <input type="color" id="player-color-input" value="#1976d2" />
+                  <span id="color-hex-display">#1976D2</span>
+                </div>
+              </div>
+
+              <div class="field-block">
+                <label for="skin-preset-input">Skin Preset</label>
+                <select id="skin-preset-input">
+                  <option value="custom">Custom</option>
+                  <option value="classic">Classic Blue</option>
+                  <option value="lava">Lava Orange</option>
+                  <option value="forest">Forest Green</option>
+                  <option value="neon">Neon Cyan</option>
+                </select>
+              </div>
+
+              <div class="field-block">
+                <label for="master-volume-input">Master Volume</label>
+                <input
+                  id="master-volume-input"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value="100"
+                />
+              </div>
+
+              <div class="field-block">
+                <label for="music-volume-input">Music Volume</label>
+                <input
+                  id="music-volume-input"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value="70"
+                />
+              </div>
+
+              <div class="field-block">
+                <label for="sfx-volume-input">SFX Volume</label>
+                <input
+                  id="sfx-volume-input"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value="80"
+                />
+              </div>
+
+              <div class="field-block checkbox-row">
+                <label for="shadows-toggle-input">Dynamic Shadows</label>
+                <input id="shadows-toggle-input" type="checkbox" checked />
+              </div>
+
+              <div class="field-block">
+                <label for="quality-input">Render Quality</label>
+                <select id="quality-input">
+                  <option value="auto">Auto</option>
+                  <option value="performance">Performance</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="ultra">Ultra</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div
+            id="start-screen-message"
+            class="start-message"
+            aria-live="polite"
+          ></div>
+          <button id="play-button" class="launch-button">Enter Server</button>
+        </div>
+      </div>
+
+      <!-- UI Overlay Engine -->
+      <div id="ui-layer">
+        <div id="top-bar">
+          <div class="money-box"><span id="money-text">$15</span></div>
+          <div class="header-center">
+            <div class="title-box">SERVER FACTORY 3D</div>
+            <div class="data-box"><span id="data-text">DATA: 0 / 10</span></div>
+          </div>
+        </div>
+
+        <div id="controls-hint">
+          <span class="key">W</span><span class="key">A</span
+          ><span class="key">S</span><span class="key">D</span> &amp; ARROWS TO
+          MOVE &nbsp; | &nbsp; TOUCH TO DRAG
+        </div>
+
+        <div id="powerup-store-ui">
+          <button id="powerup-store-button" type="button">
+            Power-Up Store
+          </button>
+          <div id="powerup-status" aria-live="polite"></div>
+          <div id="powerup-store-panel" hidden>
+            <div class="powerup-store-header">
+              <h2>Power-Up Store</h2>
+              <button id="powerup-store-close" type="button">X</button>
+            </div>
+            <p class="powerup-store-note">
+              Buy boosts to move faster and earn more cash.
+            </p>
+            <div id="powerup-items"></div>
+          </div>
+        </div>
+
+        <div id="multiplayer-status">OFFLINE</div>
+      </div>
+
+      <!-- Virtual Joystick -->
+      <div class="joystick-base" id="joystick-base">
+        <div class="joystick-stick" id="joystick-stick"></div>
+      </div>
+
+      <aside id="leaderboard-panel">
+        <div class="leaderboard-header">LEADERBOARD</div>
+        <div id="leaderboard-list"></div>
+      </aside>
+
+      <!-- Purchase Confirmation Modal -->
+      <div id="purchase-modal" style="display: none">
+        <h2>CONFIRM PURCHASE</h2>
+        <p id="purchase-text"></p>
+        <div class="purchase-buttons">
+          <button id="purchase-yes">YES</button>
+          <button id="purchase-no">NO</button>
+        </div>
+      </div>
+
+      <!-- Minimap Radar -->
+      <canvas id="minimap-canvas" width="200" height="200"></canvas>
+
+      <!-- For dynamic floating text -->
+      <div id="labels-container"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="main.js" type="module"></script>
+  </body>
+</html>

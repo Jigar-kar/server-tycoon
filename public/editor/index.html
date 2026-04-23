@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Phaser-Style Editor - 3D Tycoon</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div id="toolbar">
+    <div class="logo">Three.js Level Editor</div>
+    <button id="btn-export" style="background: #4caf50">
+      Save &amp; Sync to Game
+    </button>
+  </div>
+
+  <div id="workspace">
+    <div id="sidebar-left">
+      <h3>Library</h3>
+      <button class="btn-spawn" data-type="server">Add Server</button>
+      <button class="btn-spawn" data-type="pad">Add Purchase Pad</button>
+      <button class="btn-spawn" data-type="wall">Add Concrete Wall</button>
+      <button class="btn-spawn" data-type="floor">Add HQ Floor Base</button>
+
+      <hr style="margin:15px 0; border:none; border-top:1px solid #444;" />
+      <h3>Decorations</h3>
+      <button class="btn-spawn" data-type="tree" style="background: #2e7d32; border-color: #1b5e20;">Add Pine
+        Tree</button>
+      <button class="btn-spawn" data-type="glass" style="background: #0288d1; border-color: #01579b;">Add Glass
+        Panel</button>
+      <button class="btn-spawn" data-type="carpet" style="background: #c62828; border-color: #b71c1c;">Add Red
+        Carpet</button>
+
+      <hr style="margin:20px 0; border:none; border-top:1px solid #444;" />
+      <h3>Level Tools</h3>
+      <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; cursor:pointer;">
+        <input type="checkbox" id="snap-toggle" checked> Snap to Grid (5 units)
+      </label>
+      <button id="btn-import" style="background:#1976D2;">Import JSON Map</button>
+      <button id="btn-export-file" style="background:#0D47A1;">Download Layout</button>
+
+      <hr style="margin:20px 0; border:none; border-top:1px solid #444;" />
+      <h3>System</h3>
+      <button id="btn-clear-save" style="background:#D32F2F;">Reset Game Progress</button>
+    </div>
+
+    <div id="viewport"></div>
+
+    <div id="sidebar-right">
+      <h3>Properties</h3>
+      <div id="prop-panel">
+        <p>Select an object to edit.</p>
+      </div>
+      <button id="btn-delete" style="
+            display: none;
+            margin-top: 20px;
+            background: #f44336;
+            width: 100%;
+          ">
+        Delete Object
+      </button>
+    </div>
+  </div>
+
+  <!-- Classic Script tags to avoid file:// CORS policy blocks -->
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+  <script src="main.js"></script>
+</body>
+
+</html>
