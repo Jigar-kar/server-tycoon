@@ -1,3 +1,7 @@
+import * as THREE from "https://unpkg.com/three@0.128.0/build/three.module.js";
+import { hireWorker } from "./js/worker.js";
+import { pads, servers, dataPackets, workers, colliders, state } from "./js/state-globals.js";
+
 import {
   initChainStore,
   recordPurchaseOnChain,
@@ -12,6 +16,7 @@ import {
 import { createGlowHalo, createGrassTexture } from "./js/graphics.js";
 import { createHuman, updateCharacterAnim } from "./js/human.js";
 import {
+  initSocket,
   joinMultiplayer,
   pullMultiplayerState,
   pushMultiplayerState,
@@ -30,9 +35,6 @@ import {
   updateMinimap,
   updateUI,
 } from "./js/ui.js";
-import { hireWorker } from "./js/worker.js";
-
-import * as THREE from "https://unpkg.com/three@0.128.0/build/three.module.js";
 
 const forceNewGame = sessionStorage.getItem("forceNewGame") === "1";
 const autoStartNewGame = sessionStorage.getItem("autoStartNewGame") === "1";
@@ -44,7 +46,8 @@ if (forceNewGame) {
 
 const savedState = JSON.parse(localStorage.getItem("gameState") || "{}");
 
-const state = {
+// Initialize the shared state from saved data
+Object.assign(state, {
   money: savedState.money ?? 500,
   dataMax: savedState.dataMax ?? 10,
   dataCount: savedState.dataCount ?? 0,
@@ -56,7 +59,7 @@ const state = {
   workerCount: savedState.workerCount ?? 0,
   powerUpLevels: savedState.powerUpLevels ?? {},
   activePowerUps: savedState.activePowerUps ?? {},
-};
+});
 
 if (!state.powerUpLevels || typeof state.powerUpLevels !== "object") {
   state.powerUpLevels = {};
@@ -156,16 +159,12 @@ function getEffectiveProcessSpeedMultiplier() {
   return isPowerUpActive("overclock") ? powerUpCatalog.overclock.multiplier : 1;
 }
 
-const pads = [];
-const servers = [];
-const dataPackets = [];
-const workers = [];
-const colliders = [];
+
 
 const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.protocol === "file:";
 // Set your active ngrok URL here before uploading to itch.io!
 // Example: "https://1234-abcd.ngrok-free.app"
-export const NGROK_URL = ""; 
+export const NGROK_URL = "https://server-tycoon.onrender.com"; 
 
 let apiRoot = "http://localhost:3000";
 if (!isLocal) {
@@ -187,6 +186,8 @@ if (!isLocal) {
 } else if (location.hostname && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
     apiRoot = location.origin;
 }
+
+initSocket(apiRoot);
 
 const multiplayer = {
   playerId: localStorage.getItem("playerId") || null,
@@ -305,12 +306,32 @@ const keys = {
   arrowright: false,
 };
 window.addEventListener("keydown", (e) => {
-  if (keys.hasOwnProperty(e.key.toLowerCase()))
-    keys[e.key.toLowerCase()] = true;
+  const k = e.key.toLowerCase();
+  if (keys.hasOwnProperty(k)) {
+    keys[k] = true;
+  } else if (k === "arrowup") {
+    keys.arrowup = true;
+  } else if (k === "arrowdown") {
+    keys.arrowdown = true;
+  } else if (k === "arrowleft") {
+    keys.arrowleft = true;
+  } else if (k === "arrowright") {
+    keys.arrowright = true;
+  }
 });
 window.addEventListener("keyup", (e) => {
-  if (keys.hasOwnProperty(e.key.toLowerCase()))
-    keys[e.key.toLowerCase()] = false;
+  const k = e.key.toLowerCase();
+  if (keys.hasOwnProperty(k)) {
+    keys[k] = false;
+  } else if (k === "arrowup") {
+    keys.arrowup = false;
+  } else if (k === "arrowdown") {
+    keys.arrowdown = false;
+  } else if (k === "arrowleft") {
+    keys.arrowleft = false;
+  } else if (k === "arrowright") {
+    keys.arrowright = false;
+  }
 });
 
 // --- TOUCH / VIRTUAL JOYSTICK ---
@@ -386,13 +407,81 @@ player.labelElement = createNameTag(
   true,
 );
 
-// --- FACTORIES ---
-const packetGeo = new THREE.IcosahedronGeometry(0.8, 0);
-const packetMat = new THREE.MeshLambertMaterial({
-  color: 0xffc107,
-  emissive: 0xffc107,
-  emissiveIntensity: 0.6,
-});
+// --- DATA COLLECTIBLES (USB Pendrive + CD Disc shapes) ---
+// Dummy refs kept for module compat (exported via the named block at EOF)
+const packetGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+const packetMat = new THREE.MeshLambertMaterial({ color: 0xffc107 });
+
+let _pickupTypeCounter = 0;
+
+function createDataPickup() {
+  const type = _pickupTypeCounter++ % 2; // alternates: 0 = USB, 1 = CD
+  const group = new THREE.Group();
+
+  if (type === 0) {
+    // ── USB PENDRIVE ──────────────────────────────────────────────────
+    // Main body (rectangular plastic casing)
+    const bodyMat = new THREE.MeshLambertMaterial({ color: 0x29b6f6, emissive: 0x0277bd, emissiveIntensity: 0.4 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.28, 1.2), bodyMat);
+    body.castShadow = true;
+    group.add(body);
+
+    // Metal connector tip
+    const tipMat = new THREE.MeshLambertMaterial({ color: 0xb0bec5, emissive: 0x546e7a, emissiveIntensity: 0.2 });
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.45), tipMat);
+    tip.position.set(0, 0, 0.82);
+    group.add(tip);
+
+    // Thin inner contact strip
+    const stripMat = new THREE.MeshLambertMaterial({ color: 0xffcc02, emissive: 0xffcc02, emissiveIntensity: 0.5 });
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.38), stripMat);
+    strip.position.set(0, 0.13, 0.82);
+    group.add(strip);
+
+    // LED indicator dot
+    const ledMat = new THREE.MeshLambertMaterial({ color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 1.0 });
+    const led = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), ledMat);
+    led.position.set(0.12, 0.15, -0.4);
+    group.add(led);
+
+    // Keyring hole
+    const holeMat = new THREE.MeshLambertMaterial({ color: 0x1565c0, emissive: 0x1565c0, emissiveIntensity: 0.2 });
+    const hole = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.03, 6, 10), holeMat);
+    hole.position.set(0, 0, -0.65);
+    hole.rotation.x = Math.PI / 2;
+    group.add(hole);
+
+  } else {
+    // ── CD / DVD DISC ─────────────────────────────────────────────────
+    // Outer disc (flat cylinder)
+    const discMat = new THREE.MeshLambertMaterial({ color: 0xe1f5fe, emissive: 0x4fc3f7, emissiveIntensity: 0.35, side: THREE.DoubleSide });
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.07, 24), discMat);
+    group.add(disc);
+
+    // Rainbow data ring (coloured ring on disc surface)
+    const ringColors = [0xff5722, 0xab47bc, 0x29b6f6, 0x66bb6a];
+    const rColors = ringColors[Math.floor(Math.random() * ringColors.length)];
+    const dataRingMat = new THREE.MeshLambertMaterial({ color: rColors, emissive: rColors, emissiveIntensity: 0.5, side: THREE.DoubleSide });
+    const dataRing = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.85, 24), dataRingMat);
+    dataRing.rotation.x = -Math.PI / 2;
+    dataRing.position.y = 0.04;
+    group.add(dataRing);
+
+    // Inner hub (silver circle)
+    const hubMat = new THREE.MeshLambertMaterial({ color: 0x90a4ae, emissive: 0x546e7a, emissiveIntensity: 0.2 });
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.1, 16), hubMat);
+    hub.position.y = 0.0;
+    group.add(hub);
+
+    // Centre hole
+    const holeMat = new THREE.MeshLambertMaterial({ color: 0x1a1a2e });
+    const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 12), holeMat);
+    hole.position.y = 0.0;
+    group.add(hole);
+  }
+
+  return group;
+}
 
 const ringGeo = new THREE.RingGeometry(8, 9, 24);
 const ringMat = new THREE.MeshBasicMaterial({
@@ -404,9 +493,11 @@ const ringMat = new THREE.MeshBasicMaterial({
 
 // --- MINIMAP SYSTEM ---
 const minimapCanvas = document.getElementById("minimap-canvas");
+minimapCanvas.width = 220;
+minimapCanvas.height = 220;
 const minimapCtx = minimapCanvas.getContext("2d");
 const minimapScale = 0.5; // pixels per unit
-const minimapSize = 200;
+const minimapSize = 220;
 
 // --- UI HELPERS ---
 
@@ -1048,9 +1139,9 @@ function initMap() {
   }
 }
 
-// Spawner Logic
+// Spawner Logic — spawns 3 packets per tick so 5+ players always have plenty
 setInterval(() => {
-  const maxPackets = isMobile ? 80 : 180;
+  const maxPackets = isMobile ? 200 : 500;
   if (dataPackets.length >= maxPackets) return;
 
   const spawnMinX = -135;
@@ -1058,31 +1149,35 @@ setInterval(() => {
   const spawnMinZ = -75;
   const spawnMaxZ = 135;
 
-  let x, z;
-  let attempts = 0;
-  do {
-    x = spawnMinX + Math.random() * (spawnMaxX - spawnMinX);
-    z = spawnMinZ + Math.random() * (spawnMaxZ - spawnMinZ);
-    attempts++;
-  } while (checkPacketSpawn(x, z) && attempts < 20);
+  const spawnCount = Math.min(3, maxPackets - dataPackets.length);
+  for (let s = 0; s < spawnCount; s++) {
+    let x, z;
+    let attempts = 0;
+    do {
+      x = spawnMinX + Math.random() * (spawnMaxX - spawnMinX);
+      z = spawnMinZ + Math.random() * (spawnMaxZ - spawnMinZ);
+      attempts++;
+    } while (checkPacketSpawn(x, z) && attempts < 20);
 
-  if (attempts >= 20) return;
+    if (attempts >= 20) continue;
 
-  const mesh = new THREE.Mesh(packetGeo, packetMat);
-  mesh.position.set(x, 1, z);
+    const mesh = createDataPickup();
+    mesh.position.set(x, 1, z);
+    mesh.scale.setScalar(0.9 + Math.random() * 0.3);
 
-  scene.add(mesh);
+    scene.add(mesh);
 
-  dataPackets.push({
-    mesh,
-    active: true,
-    ogY: 1.5,
-    position: mesh.position,
-    isTargeted: false,
-    uiElement: null,
-    isData: true,
-  });
-}, 1000);
+    dataPackets.push({
+      mesh,
+      active: true,
+      ogY: 1.5,
+      position: mesh.position,
+      isTargeted: false,
+      uiElement: null,
+      isData: true,
+    });
+  }
+}, 800);
 
 initMap();
 updateUI();
@@ -1162,12 +1257,13 @@ function readStoredSettings() {
 const gameSettings = readStoredSettings();
 
 const webAudioSources = {
-  click: "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3",
-  walk: "https://assets.mixkit.co/active_storage/sfx/212/212-preview.mp3",
-  collect: "https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3",
-  purchase: "https://assets.mixkit.co/active_storage/sfx/270/270-preview.mp3",
-  success: "https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3",
-  error: "https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3",
+  click: "./assets/sound/click.mp3",
+  walk: "./assets/sound/walk.mp3",
+  collect: "./assets/sound/collect.mp3",
+  purchase: "./assets/sound/purchase.mp3",
+  success: "./assets/sound/success.mp3",
+  error: "./assets/sound/error.mp3",
+  dataDrop: "./assets/sound/money-soundfx.mp3",
 };
 
 const audioState = {
@@ -1176,13 +1272,20 @@ const audioState = {
   audioContext: null,
 };
 
+const createSFX = (src) => {
+  const aud = new Audio(src);
+  aud.crossOrigin = "anonymous";
+  return aud;
+};
+
 const sfxPlayers = {
-  click: new Audio(webAudioSources.click),
-  walk: new Audio(webAudioSources.walk),
-  collect: new Audio(webAudioSources.collect),
-  purchase: new Audio(webAudioSources.purchase),
-  success: new Audio(webAudioSources.success),
-  error: new Audio(webAudioSources.error),
+  click: createSFX(webAudioSources.click),
+  walk: createSFX(webAudioSources.walk),
+  collect: createSFX(webAudioSources.collect),
+  purchase: createSFX(webAudioSources.purchase),
+  success: createSFX(webAudioSources.success),
+  error: createSFX(webAudioSources.error),
+  dataDrop: createSFX(webAudioSources.dataDrop),
 };
 
 const audioMix = {
@@ -1193,6 +1296,7 @@ const audioMix = {
     purchase: 0.95,
     success: 1.0,
     error: 0.85,
+    dataDrop: 1.0,
   },
 };
 
@@ -1662,6 +1766,132 @@ if (powerUpStoreClose) {
   });
 }
 
+// ── NEW PLAYER TUTORIAL ───────────────────────────────────────────────────────
+function showNewPlayerTutorial() {
+  const steps = [
+    {
+      icon: "💿",
+      title: "Collect Data!",
+      body: "Walk over <b>USB drives & CDs</b> scattered around the world to pick them up. They fill your DATA meter at the top.",
+    },
+    {
+      icon: "🖥️",
+      title: "Buy Your First Server!",
+      body: "Find the glowing <b>BUY SERVER</b> pad on the ground and stand on it. A purchase prompt will appear — confirm to place your first server rack!",
+    },
+    {
+      icon: "📤",
+      title: "Upload Data to Server!",
+      body: "Walk close to your server while holding data. The data will <b>auto-upload</b> — you'll hear a sound and see [] pop up!",
+    },
+    {
+      icon: "💰",
+      title: "Earn Money!",
+      body: "Your server processes the data and <b>generates money</b> over time. Watch your green $ counter grow!",
+    },
+    {
+      icon: "⬆️",
+      title: "Buy Upgrades!",
+      body: "Find <b>UPGRADE SERVERS</b>, <b>UPGRADE SUIT</b>, and <b>HIRE WORKER</b> pads to automate your factory and dominate the leaderboard!",
+    },
+  ];
+
+  let step = 0;
+
+  const overlay = document.createElement("div");
+  overlay.id = "tutorial-overlay";
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 80px; pointer-events: none;
+  `;
+
+  const card = document.createElement("div");
+  card.style.cssText = `
+    background: linear-gradient(135deg, rgba(13,71,161,0.97), rgba(25,118,210,0.97));
+    color: #fff; border-radius: 20px; padding: 18px 24px;
+    max-width: 380px; width: 90%; pointer-events: auto;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    border: 2px solid rgba(255,255,255,0.2);
+    font-family: 'Orbitron', sans-serif;
+    animation: tutSlideIn 0.4s ease;
+  `;
+
+  const styleTag = document.createElement("style");
+  styleTag.textContent = `
+    @keyframes tutSlideIn {
+      from { transform: translateY(40px); opacity: 0; }
+      to   { transform: translateY(0);   opacity: 1; }
+    }
+    #tutorial-overlay .tut-progress {
+      display: flex; gap: 6px; margin-bottom: 14px;
+    }
+    #tutorial-overlay .tut-pip {
+      flex: 1; height: 4px; border-radius: 4px;
+      background: rgba(255,255,255,0.25); transition: background 0.3s;
+    }
+    #tutorial-overlay .tut-pip.done { background: #00e5ff; }
+    #tutorial-overlay .tut-icon {
+      font-size: 36px; margin-bottom: 6px;
+    }
+    #tutorial-overlay .tut-title {
+      font-size: 16px; font-weight: 900; letter-spacing: 1.5px;
+      margin-bottom: 8px; color: #00e5ff;
+    }
+    #tutorial-overlay .tut-body {
+      font-family: 'Share Tech Mono', monospace; font-size: 13px;
+      line-height: 1.6; color: rgba(255,255,255,0.9); margin-bottom: 16px;
+    }
+    #tutorial-overlay .tut-actions {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    #tutorial-overlay .tut-next {
+      background: #00e5ff; color: #0d47a1; border: none;
+      border-radius: 10px; padding: 10px 20px;
+      font-family: 'Orbitron', sans-serif; font-weight: 900;
+      font-size: 12px; cursor: pointer; letter-spacing: 1px;
+    }
+    #tutorial-overlay .tut-skip {
+      background: none; border: none; color: rgba(255,255,255,0.5);
+      font-size: 11px; cursor: pointer; font-family: 'Orbitron', sans-serif;
+    }
+  `;
+  document.head.appendChild(styleTag);
+
+  function renderStep() {
+    const s = steps[step];
+    card.innerHTML = `
+      <div class="tut-progress">${steps.map((_, i) => `<div class="tut-pip ${i <= step ? 'done' : ''}"></div>`).join("")}</div>
+      <div class="tut-icon">${s.icon}</div>
+      <div class="tut-title">${s.title}</div>
+      <div class="tut-body">${s.body}</div>
+      <div class="tut-actions">
+        <button class="tut-skip">Skip tutorial</button>
+        <button class="tut-next">${step < steps.length - 1 ? 'NEXT →' : 'LET\'S GO! 🚀'}</button>
+      </div>
+    `;
+    card.querySelector(".tut-next").onclick = () => {
+      step++;
+      if (step >= steps.length) {
+        overlay.remove();
+        styleTag.remove();
+      } else {
+        card.style.animation = "none";
+        requestAnimationFrame(() => { card.style.animation = "tutSlideIn 0.35s ease"; });
+        renderStep();
+      }
+    };
+    card.querySelector(".tut-skip").onclick = () => {
+      overlay.remove();
+      styleTag.remove();
+    };
+  }
+
+  renderStep();
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+}
+
 playButton.addEventListener("click", () => {
   unlockAudio();
   playSfx("click", 70);
@@ -1695,6 +1925,69 @@ playButton.addEventListener("click", () => {
   document.body.classList.add("game-active");
   joinMultiplayer();
   initChainStore(multiplayer);
+
+  // Hide controls hint after 8s
+  hideControlsHint();
+
+  // Show tutorial for new players
+  if (isFirstTimePlayer) {
+    setTimeout(() => showNewPlayerTutorial(), 2000);
+  }
+
+  // Show mobile toggle if on mobile
+  const mobileLbToggleWrapper = document.getElementById("mobile-leaderboard-toggle-wrapper");
+  if (mobileLbToggleWrapper && window.innerWidth <= 768) {
+    mobileLbToggleWrapper.style.display = "block";
+  }
+});
+
+// Helper to hide movement controls hint
+function hideControlsHint() {
+  const hint = document.getElementById("controls-hint");
+  if (!hint) return;
+  
+  console.log("[UI] Starting 8s timer to hide controls hint...");
+  
+  // Set initial transition
+  hint.style.transition = "opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1), transform 1.5s cubic-bezier(0.4, 0, 0.2, 1)";
+  
+  setTimeout(() => {
+    console.log("[UI] Hiding controls hint now.");
+    hint.classList.add("hint-hidden");
+    // Remove after animation to be sure
+    setTimeout(() => { 
+      if (hint.parentNode) hint.remove(); 
+    }, 2000);
+  }, 8000);
+}
+
+// Mobile Leaderboard Drawer Toggle - More Robust Implementation
+document.addEventListener("DOMContentLoaded", () => {
+  const toggleBtn = document.getElementById("mobile-leaderboard-toggle");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const panel = document.getElementById("chain-spenders-panel");
+      if (panel) {
+        panel.classList.toggle("is-open");
+        if (typeof playSfx === 'function') playSfx("click", 70);
+      } else {
+        console.warn("Chain spenders panel not found yet. Try again in a moment.");
+      }
+    });
+  }
+});
+
+// Close drawer if clicking anywhere else
+document.addEventListener("click", (e) => {
+  const panel = document.getElementById("chain-spenders-panel");
+  if (panel && panel.classList.contains("is-open")) {
+    const toggleBtn = document.getElementById("mobile-leaderboard-toggle");
+    if (!panel.contains(e.target) && e.target !== toggleBtn && !toggleBtn?.contains(e.target)) {
+      panel.classList.remove("is-open");
+    }
+  }
 });
 
 if (autoStartNewGame) {
@@ -1702,6 +1995,9 @@ if (autoStartNewGame) {
   document.body.classList.add("game-active");
   joinMultiplayer();
   initChainStore(multiplayer);
+
+  // Hide controls hint after 15s
+  hideControlsHint();
 }
 
 let currentPurchasePad = null;
@@ -1996,6 +2292,7 @@ function animate() {
         state.dataCount--;
         updateUI();
         updateServerUI(server);
+        playSfx("dataDrop", 100);
         player.lastDrop = time;
         spawnFloatingText(
           player.position.x,
@@ -2274,3 +2571,5 @@ export {
   workers
 };
 
+console.log("🚀 SERVER FACTORY 3D: Initialized Successfully.");
+console.log("🔧 Systems: Online | Physics: Active | Audio: Ready");

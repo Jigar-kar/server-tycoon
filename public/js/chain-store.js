@@ -42,6 +42,7 @@ function buildSpendersPanel() {
       <span class="cs-lb-icon">⛓</span>
       <span class="cs-lb-title">LEADERBOARD</span>
       <span class="cs-lb-badge" id="cs-badge" title="">●</span>
+      <button id="cs-close-btn" class="cs-lb-close-mobile" title="Close">×</button>
     </div>
     <div class="cs-lb-sub">All-time · On-chain · Sepolia</div>
     <div id="cs-spenders" class="cs-lb-list">
@@ -69,14 +70,30 @@ function renderSpenders(spenders, listEl, badgeEl) {
     return;
   }
 
-  listEl.innerHTML = spenders
-    .slice(0, 8)
-    .map((s, i) => {
-      const medal  = MEDALS[i] || `#${i + 1}`;
+  const isMobile = window.innerWidth <= 768;
+  const limit = isMobile ? 3 : 8;
+  let displayList = spenders.slice(0, limit).map((s, i) => ({ ...s, rank: i + 1 }));
+
+  const myName = _multiplayerRef?.playerName;
+  const meInTopLimit = displayList.some(s => s.playerName === myName);
+
+  if (myName && !meInTopLimit) {
+    // Find me in the full list
+    const myIdx = spenders.findIndex(s => s.playerName === myName);
+    if (myIdx !== -1) {
+      // Add the current player's rank as a floating row at the bottom
+      displayList.push({ ...spenders[myIdx], rank: myIdx + 1, isMeRow: true });
+    }
+  }
+
+  listEl.innerHTML = displayList
+    .map((s) => {
+      const i = s.rank - 1;
+      const medal  = MEDALS[i] || `#${s.rank}`;
       const isMe   = _multiplayerRef && s.playerName === _multiplayerRef.playerName;
       const isTop3 = i < 3;
       return `
-        <div class="cs-lb-row ${isTop3 ? "cs-lb-row--top" : ""} ${isMe ? "cs-lb-row--me" : ""}">
+        <div class="cs-lb-row ${isTop3 ? "cs-lb-row--top" : ""} ${isMe ? "cs-lb-row--me" : ""} ${s.isMeRow ? "cs-lb-row--floating-me" : ""}">
           <span class="cs-lb-rank">${medal}</span>
           <div class="cs-lb-info">
             <span class="cs-lb-name" title="${escHtml(s.playerName)}">${escHtml(s.playerName)}${isMe ? " <span class='cs-lb-you'>(you)</span>" : ""}</span>
@@ -140,6 +157,13 @@ export function initChainStore(multiplayerRef) {
   const badgeEl    = panel.querySelector("#cs-badge");
   const linkEl     = panel.querySelector("#cs-etherscan-link");
   const refreshBtn = panel.querySelector("#cs-refresh-btn");
+  const closeBtn   = panel.querySelector("#cs-close-btn");
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      panel.classList.remove("is-open");
+    });
+  }
 
   // Etherscan contract link
   fetch(`${apiRoot}/api/blockchain-status`, { headers: { "ngrok-skip-browser-warning": "true" } })

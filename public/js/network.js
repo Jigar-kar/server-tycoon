@@ -1,5 +1,5 @@
+import { io } from "https://cdn.socket.io/4.8.1/socket.io.esm.min.js";
 import {
-    apiRoot,
     createHuman,
     createNameTag,
     multiplayer,
@@ -8,6 +8,27 @@ import {
     setMultiplayerStatus,
     state
 } from "../main.js";
+
+let socket = null;
+
+export function initSocket(url) {
+    socket = io(url);
+
+    socket.on("stateUpdate", (payload) => {
+        multiplayer.connected = true;
+        syncRemotePlayers(payload.players || []);
+        multiplayer.leaderboard = payload.leaderboard || payload.players || [];
+        setMultiplayerStatus(
+          `ONLINE • ${multiplayer.playerName} • ${payload.roomId || "room-1"} • ${payload.roomPlayers || payload.players?.length || 0}/${payload.roomCapacity || 10} PLAYERS`,
+          true,
+        );
+    });
+
+    socket.on("connect_error", () => {
+        multiplayer.connected = false;
+        setMultiplayerStatus("OFFLINE", false);
+    });
+}
 
 export function removeRemotePlayer(playerId) {
   const remote = multiplayer.remotePlayers.get(playerId);
@@ -78,129 +99,98 @@ export function syncRemotePlayers(remoteEntries) {
 }
 
 export async function joinMultiplayer() {
-  if (multiplayer.joining) return;
+  if (multiplayer.joining || !socket) return;
   multiplayer.joining = true;
   multiplayer.lastJoinAt = performance.now();
 
   try {
-    const response = await fetch(`${apiRoot}/api/join`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
-      body: JSON.stringify({
+    socket.emit("join", {
         id: multiplayer.playerId,
         name: multiplayer.playerName,
         color: multiplayer.color,
-      }),
+    }, (response) => {
+        if (!response.ok) {
+            multiplayer.connected = false;
+            setMultiplayerStatus("OFFLINE", false);
+            multiplayer.joining = false;
+            return;
+        }
+        
+        const payload = response.player;
+        multiplayer.playerId = payload.id;
+        multiplayer.playerName = payload.name || multiplayer.playerName;
+        multiplayer.color =
+          payload.shirtColor || payload.color || multiplayer.color;
+
+        if (payload.money !== undefined) state.money = payload.money;
+        if (payload.dataMax !== undefined) state.dataMax = payload.dataMax;
+        if (payload.dataCount !== undefined) state.dataCount = payload.dataCount;
+        if (payload.serverLevel !== undefined)
+          state.serverLevel = payload.serverLevel;
+        if (payload.activeServers !== undefined)
+          state.activeServers = payload.activeServers;
+        if (payload.workerCount !== undefined)
+          state.workerCount = payload.workerCount;
+
+        localStorage.setItem("playerId", multiplayer.playerId);
+        localStorage.setItem("playerName", multiplayer.playerName);
+        localStorage.setItem("playerColor", multiplayer.color);
+        localStorage.setItem("gameState", JSON.stringify(state));
+        multiplayer.connected = true;
+        if (!player.labelElement) {
+          player.labelElement = createNameTag(
+            multiplayer.playerName,
+            multiplayer.color,
+            true,
+          );
+        }
+        player.labelElement.innerText = multiplayer.playerName;
+        player.labelElement.style.borderColor = multiplayer.color;
+        setMultiplayerStatus(`ONLINE • ${multiplayer.playerName}`, true);
+        multiplayer.joining = false;
     });
-
-    if (!response.ok) throw new Error("Join failed");
-    const payload = await response.json();
-
-    multiplayer.playerId = payload.id;
-    multiplayer.playerName = payload.name || multiplayer.playerName;
-    multiplayer.color =
-      payload.shirtColor || payload.color || multiplayer.color;
-
-    if (payload.money !== undefined) state.money = payload.money;
-    if (payload.dataMax !== undefined) state.dataMax = payload.dataMax;
-    if (payload.dataCount !== undefined) state.dataCount = payload.dataCount;
-    if (payload.serverLevel !== undefined)
-      state.serverLevel = payload.serverLevel;
-    if (payload.activeServers !== undefined)
-      state.activeServers = payload.activeServers;
-    if (payload.workerCount !== undefined)
-      state.workerCount = payload.workerCount;
-
-    localStorage.setItem("playerId", multiplayer.playerId);
-    localStorage.setItem("playerName", multiplayer.playerName);
-    localStorage.setItem("playerColor", multiplayer.color);
-    localStorage.setItem("gameState", JSON.stringify(state));
-    multiplayer.connected = true;
-    if (!player.labelElement) {
-      player.labelElement = createNameTag(
-        multiplayer.playerName,
-        multiplayer.color,
-        true,
-      );
-    }
-    player.labelElement.innerText = multiplayer.playerName;
-    player.labelElement.style.borderColor = multiplayer.color;
-    setMultiplayerStatus(`ONLINE • ${multiplayer.playerName}`, true);
-    await pullMultiplayerState(true);
   } catch (error) {
     multiplayer.connected = false;
     setMultiplayerStatus("OFFLINE", false);
-  } finally {
     multiplayer.joining = false;
   }
 }
 
 let isPushing = false;
 export async function pushMultiplayerState() {
-  if (!multiplayer.playerId || isPushing) return;
+  if (!multiplayer.playerId || isPushing || !socket) return;
 
   const now = performance.now();
-  if (now - multiplayer.lastSyncAt < 80) return;
+  if (now - multiplayer.lastSyncAt < 1000/20) return; // 20 times a second max
   multiplayer.lastSyncAt = now;
   isPushing = true;
 
   localStorage.setItem("gameState", JSON.stringify(state));
 
-  try {
-    await fetch(`${apiRoot}/api/update`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
-      body: JSON.stringify({
-        id: multiplayer.playerId,
-        name: multiplayer.playerName,
-        color: multiplayer.color,
-        x: player.position.x,
-        z: player.position.z,
-        rotation: player.rotation.y,
-        money: state.money,
-        dataCount: state.dataCount,
-        dataMax: state.dataMax,
-        serverLevel: state.serverLevel,
-        activeServers: state.activeServers,
-        workerCount: state.workerCount,
-      }),
-    });
-    multiplayer.connected = true;
-  } catch (error) {
-    multiplayer.connected = false;
-  } finally {
-    isPushing = false;
-  }
+  socket.emit("update", {
+      id: multiplayer.playerId,
+      name: multiplayer.playerName,
+      color: multiplayer.color,
+      x: player.position.x,
+      z: player.position.z,
+      rotation: player.rotation.y,
+      money: state.money,
+      dataCount: state.dataCount,
+      dataMax: state.dataMax,
+      serverLevel: state.serverLevel,
+      activeServers: state.activeServers,
+      workerCount: state.workerCount,
+  });
+  
+  multiplayer.connected = true;
+  isPushing = false;
 }
 
-let isPulling = false;
 export async function pullMultiplayerState(force = false) {
-  if (!multiplayer.playerId || isPulling) return;
-
-  const now = performance.now();
-  if (!force && now - multiplayer.lastStateAt < 80) return;
-  multiplayer.lastStateAt = now;
-  isPulling = true;
-
-  try {
-    const response = await fetch(
-      `${apiRoot}/api/state?id=${encodeURIComponent(multiplayer.playerId)}`,
-      { headers: { "ngrok-skip-browser-warning": "true" } }
-    );
-    if (!response.ok) throw new Error("State fetch failed");
-
-    const payload = await response.json();
-    multiplayer.connected = true;
-    syncRemotePlayers(payload.players || []);
-    multiplayer.leaderboard = payload.leaderboard || payload.players || [];
-    setMultiplayerStatus(
-      `ONLINE • ${multiplayer.playerName} • ${payload.roomId || "room-1"} • ${payload.roomPlayers || payload.players?.length || 0}/${payload.roomCapacity || 10} PLAYERS`,
-      true,
-    );
-  } catch (error) {
-    multiplayer.connected = false;
-    setMultiplayerStatus("OFFLINE", false);
-  } finally {
-    isPulling = false;
-  }
+    // Handled by the socket.on("stateUpdate") event listener
 }
+
+window.addEventListener("beforeunload", () => {
+  if (!multiplayer.playerId || !socket) return;
+  socket.emit("leave", { id: multiplayer.playerId });
+});

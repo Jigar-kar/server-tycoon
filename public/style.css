@@ -397,6 +397,13 @@ canvas {
   letter-spacing: 1px;
 }
 
+#controls-hint.hint-hidden {
+  opacity: 0 !important;
+  transform: translateY(30px) scale(0.9);
+  pointer-events: none !important;
+  visibility: hidden;
+}
+
 #powerup-store-ui {
   position: fixed;
   left: 20px;
@@ -698,16 +705,29 @@ canvas {
 /* Minimap Radar */
 #minimap-canvas {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  border: 3px solid #1976d2;
+  bottom: 24px;
+  right: 24px;
+  width: 220px;
+  height: 220px;
   border-radius: 50%;
-  background: rgba(0, 20, 40, 0.9);
+  border: 2px solid rgba(0, 229, 255, 0.7);
+  background: rgba(2, 8, 22, 0.97);
   box-shadow:
-    0 0 20px rgba(25, 118, 210, 0.6),
-    inset 0 0 15px rgba(25, 118, 210, 0.3);
+    0 0 0 4px rgba(0, 229, 255, 0.1),
+    0 0 24px rgba(0, 229, 255, 0.4),
+    0 0 60px rgba(0, 100, 200, 0.25),
+    inset 0 0 30px rgba(0, 20, 60, 0.8);
   z-index: 50;
   cursor: pointer;
+  overflow: hidden;
+}
+
+#mobile-leaderboard-toggle-wrapper {
+  display: none;
+}
+
+.cs-lb-close-mobile {
+  display: none;
 }
 
 #leaderboard-panel {
@@ -848,137 +868,244 @@ canvas {
   box-shadow: 0 4px 0 #c62828;
 }
 
-/* --- MOBILE RESPONSIVE OPTIMIZATIONS --- */
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANDROID / MOBILE LAYOUT  (≤768px)
+   ═══════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
+
+  /* Prevent body scroll / overscroll bounce */
+  body, #game-container {
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+
+  /* ── Start screen ──────────────────────────────────────────────────────── */
   .start-panel {
-    padding: 18px;
-    border-radius: 18px;
-    max-height: 92vh;
+    padding: 16px;
+    border-radius: 16px;
+    max-height: 95dvh;
+    overflow-y: auto;
   }
 
-  .start-title {
-    font-size: 24px;
-    letter-spacing: 1px;
-  }
-
-  .start-subtitle {
-    font-size: 12px;
-    margin-bottom: 12px;
-  }
-
-  .start-actions {
-    gap: 8px;
-  }
+  .start-title { font-size: 22px; letter-spacing: 1px; }
+  .start-subtitle { font-size: 11px; margin-bottom: 10px; }
+  .start-actions { gap: 8px; }
 
   .menu-button {
     flex: 1 1 46%;
     font-size: 11px;
-    padding: 10px 8px;
+    padding: 14px 8px;
+    min-height: 44px;
+    touch-action: manipulation;
   }
 
-  .settings-grid {
-    grid-template-columns: 1fr;
+  .settings-grid { grid-template-columns: 1fr; }
+  .friends-share-row { grid-template-columns: 1fr; }
+
+  .launch-button {
+    padding: 18px;
+    font-size: 16px;
+    min-height: 54px;
+    touch-action: manipulation;
   }
 
-  .friends-share-row {
-    grid-template-columns: 1fr;
-  }
-
+  /* ── Top HUD bar ───────────────────────────────────────────────────────── */
   #top-bar {
-    padding: 10px 15px;
+    padding: 6px 12px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.92) 0%,
+      rgba(255, 255, 255, 0.5) 80%,
+      transparent 100%
+    );
   }
 
   .money-box {
-    font-size: 32px;
+    font-size: 26px;
     -webkit-text-stroke: 1px #2e7d32;
-    letter-spacing: 1px;
+    letter-spacing: 0px;
   }
 
-  .title-box {
-    font-size: 14px;
-    letter-spacing: 2px;
-    margin-bottom: 4px;
-  }
+  .title-box { font-size: 11px; letter-spacing: 1.5px; margin-bottom: 2px; }
 
   .data-box {
-    font-size: 18px;
-    padding: 2px 8px;
+    font-size: 13px;
+    padding: 2px 6px;
     border-width: 1px;
   }
 
+  /* ── Multiplayer status pill ───────────────────────────────────────────── */
   #multiplayer-status {
-    top: 60px;
-    right: 10px;
-    font-size: 8px;
-    padding: 4px 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  }
-
-  #leaderboard-panel {
-    top: 85px;
-    right: 10px;
-    width: 145px;
-    padding: 6px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(4px);
+    top: 54px;
+    right: 8px;
+    font-size: 7px;
+    padding: 3px 7px;
     box-shadow: none;
-    pointer-events: none;
-    border: 1px solid rgba(25, 118, 210, 0.2);
   }
 
-  .leaderboard-header {
-    font-size: 9px;
-    margin-bottom: 4px;
-  }
-
-  .leaderboard-row {
-    padding: 3px 4px;
-    font-size: 9px;
-    gap: 4px;
-    grid-template-columns: 22px 1fr auto;
-    border-radius: 6px;
-  }
-
-  .leaderboard-empty {
-    font-size: 9px;
-    padding: 4px;
-  }
-
+  /* ── Minimap — top-right corner, compact ───────────────────────────────── */
   #minimap-canvas {
-    bottom: 50px;
-    right: 10px;
-    width: 85px !important;
-    height: 85px !important;
-    border-width: 2px;
-    opacity: 0.85;
+    top: 76px;
+    bottom: auto;
+    right: 8px;
+    left: auto;
+    width: 110px !important;
+    height: 110px !important;
+    border-width: 1.5px;
+    border-radius: 50%;
+    opacity: 0.92;
     pointer-events: none;
+    box-shadow:
+      0 0 0 3px rgba(0, 229, 255, 0.12),
+      0 0 14px rgba(0, 229, 255, 0.35);
   }
 
-  #controls-hint {
+  .cs-lb-refresh { font-size: 10px; padding: 1px 4px; }
+
+  /* ── Mobile Leaderboard Drawer ── */
+  #chain-spenders-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    top: auto;
+    right: auto;
+    width: 100%;
+    max-width: 100%;
+    height: 50vh;
+    max-height: 50vh;
+    border-radius: 24px 24px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+    z-index: 1000;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    pointer-events: auto;
+  }
+
+  #chain-spenders-panel.is-open {
+    transform: translateY(0);
+  }
+
+  /* Add a pull handle for the drawer */
+  #chain-spenders-panel::after {
+    content: "";
     position: absolute;
-    bottom: 10px;
-    left: 10px;
-    margin-bottom: 0px;
-    font-size: 9px;
-    padding: 6px 10px;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
   }
 
+  .cs-lb-header { padding: 16px 20px 4px; }
+  .cs-lb-list { padding: 8px 16px; max-height: calc(50vh - 100px); }
+
+  .cs-lb-close-mobile {
+    display: block;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 24px;
+    padding: 0 4px;
+    cursor: pointer;
+    line-height: 1;
+    margin-left: auto;
+  }
+
+  /* Leaderboard Toggle Button (Mobile Only) */
+  #mobile-leaderboard-toggle-wrapper {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 999; /* Ensure it's above everything */
+    display: block;
+    pointer-events: auto;
+  }
+
+  #mobile-leaderboard-toggle {
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+    color: #fff;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50px; /* Capsule shape */
+    padding: 12px 24px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(59, 130, 246, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    touch-action: manipulation;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  #mobile-leaderboard-toggle:active {
+    transform: scale(0.95);
+    background: #3b82f6;
+  }
+
+  /* Old room leaderboard panel */
+  #leaderboard-panel { display: none !important; }
+
+  /* ── PowerUp store — top-left below top-bar ─────────────────────────────── */
   #powerup-store-ui {
-    top: 60px;
-    left: 10px;
-    width: min(280px, calc(100vw - 20px));
+    top: 54px;
+    left: 8px;
+    /* Don't overlap the minimap on the right */
+    width: min(230px, calc(100vw - 135px));
   }
 
   #powerup-store-button {
     font-size: 10px;
-    padding: 8px 10px;
+    padding: 10px 12px;
+    min-height: 44px;
+    touch-action: manipulation;
   }
 
-  #powerup-status {
-    font-size: 10px;
+  #powerup-status { font-size: 9px; }
+
+  /* ── Controls hint — hidden on mobile (joystick replaces it) ────────────── */
+  #controls-hint { display: none !important; }
+
+  /* ── Virtual joystick — larger for thumbs ──────────────────────────────── */
+  .joystick-base { width: 120px; height: 120px; }
+  .joystick-stick { width: 50px; height: 50px; }
+
+  /* ── In-world floating labels ───────────────────────────────────────────── */
+  .pad-title { font-size: 13px; }
+  .pad-cost { font-size: 21px; }
+  .server-ui { font-size: 13px; padding: 4px 10px; }
+
+  /* ── Purchase modal ─────────────────────────────────────────────────────── */
+  #purchase-modal {
+    width: min(320px, 90vw);
+    padding: 18px;
+  }
+
+  #purchase-modal h2 { font-size: 17px; }
+  #purchase-modal p { font-size: 14px; }
+
+  .purchase-buttons button {
+    padding: 14px 20px;
+    font-size: 14px;
+    min-height: 50px;
+    touch-action: manipulation;
+  }
+
+  /* ── Tutorial card — raised above virtual joystick area ─────────────────── */
+  #tutorial-overlay {
+    padding-bottom: 165px !important;
+    align-items: flex-end;
   }
 }
+
+
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ON-CHAIN TOP SPENDERS LEADERBOARD
@@ -997,9 +1124,9 @@ body:not(.game-active) #chain-spenders-panel {
 
 #chain-spenders-panel {
   position: fixed;
-  top: 152px;
-  right: 20px;
-  width: 244px;
+  bottom: 20px;
+  left: 20px;
+  width: 256px;
   z-index: 55;
   border-radius: 18px;
   border: 1.5px solid rgba(56, 189, 248, 0.22);
@@ -1114,7 +1241,7 @@ body:not(.game-active) #chain-spenders-panel {
   flex-direction: column;
   gap: 2px;
   padding: 7px 9px;
-  max-height: 280px;
+  max-height: 220px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(56, 189, 248, 0.25) transparent;
@@ -1142,6 +1269,41 @@ body:not(.game-active) #chain-spenders-panel {
     border-color 0.2s;
   animation: cs-in 0.25s ease;
 }
+
+.cs-lb-row--floating-me {
+  border: 2px solid rgba(74, 222, 128, 0.4) !important;
+  margin-top: 10px;
+  background: rgba(74, 222, 128, 0.12) !important;
+  position: relative;
+  box-shadow: 0 0 15px rgba(74, 222, 128, 0.1);
+}
+
+/* Visual separator line before the floating rank */
+.cs-lb-row--floating-me::after {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+
+.cs-lb-row--floating-me::before {
+  content: "YOUR RANK";
+  position: absolute;
+  top: -8px;
+  left: 10px;
+  font-size: 7px;
+  background: #4ade80;
+  color: #0d47a1;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 900;
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 0.5px;
+}
+
 @keyframes cs-in {
   from {
     opacity: 0;
@@ -1301,61 +1463,3 @@ body:not(.game-active) #chain-spenders-panel {
   animation: cs-spin 0.8s linear infinite;
 }
 
-/* ── Mobile ──────────────────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  #chain-spenders-panel {
-    top: 85px;
-    right: 10px;
-    width: 148px;
-    border-radius: 10px;
-    backdrop-filter: blur(6px);
-  }
-
-  .cs-lb-header {
-    padding: 7px 9px 2px;
-  }
-  .cs-lb-title {
-    font-size: 9px;
-    letter-spacing: 1.5px;
-  }
-  .cs-lb-icon {
-    font-size: 11px;
-  }
-  .cs-lb-sub {
-    font-size: 7px;
-    padding: 0 9px 5px;
-  }
-
-  .cs-lb-list {
-    padding: 4px 5px;
-    max-height: 150px;
-    gap: 1px;
-  }
-
-  .cs-lb-row {
-    padding: 4px 5px;
-    border-radius: 7px;
-  }
-  .cs-lb-rank {
-    font-size: 12px;
-  }
-  .cs-lb-name {
-    font-size: 8.5px;
-  }
-  .cs-lb-txs {
-    display: none;
-  }
-  .cs-lb-score {
-    font-size: 8.5px;
-  }
-
-  .cs-lb-footer {
-    padding: 4px 7px 6px;
-  }
-  .cs-lb-etherscan {
-    font-size: 7px;
-  }
-  .cs-lb-refresh {
-    font-size: 11px;
-  }
-}

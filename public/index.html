@@ -2,13 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="wavedash-compat.js"></script>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>Server Factory 3D Tycoon</title>
     <link rel="icon" href="data:," />
     <link
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap"
       rel="stylesheet"
     />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0a1628" />
     <link rel="stylesheet" href="style.css" />
   </head>
 
@@ -179,6 +186,12 @@
           </div>
         </div>
 
+        <div id="mobile-leaderboard-toggle-wrapper">
+          <button id="mobile-leaderboard-toggle" type="button">
+            <span class="icon">🏆</span> Leaderboard
+          </button>
+        </div>
+
         <div id="multiplayer-status">OFFLINE</div>
       </div>
 
@@ -203,13 +216,12 @@
       </div>
 
       <!-- Minimap Radar -->
-      <canvas id="minimap-canvas" width="200" height="200"></canvas>
+      <canvas id="minimap-canvas" width="240" height="240"></canvas>
 
       <!-- For dynamic floating text -->
       <div id="labels-container"></div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="main.js" type="module"></script>
   </body>
 </html>
