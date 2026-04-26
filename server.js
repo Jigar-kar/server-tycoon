@@ -65,6 +65,11 @@ loadPlayers();
 blockchain.init().catch((err) => console.error("[Blockchain] Boot error:", err.message));
 
 const server = http.createServer(async (request, response) => {
+  // Allow iframe embedding and fix Cross-Origin Resource Policy (CORP)
+  response.removeHeader("X-Frame-Options");
+  response.setHeader("Content-Security-Policy", "frame-ancestors *");
+  response.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+
   const url = new URL(request.url, `http://${request.headers.host}`);
 
   if (url.pathname.startsWith("/socket.io/")) {
@@ -93,8 +98,8 @@ const server = http.createServer(async (request, response) => {
       }
       blockchain.recordPurchase(
         player.name,
-        body.action    || "PURCHASE",
-        body.cost      || 0,
+        body.action || "PURCHASE",
+        body.cost || 0,
         body.balanceAfter ?? player.money
       );
       return sendJson(response, 200, { ok: true, queued: true });
@@ -116,7 +121,7 @@ const server = http.createServer(async (request, response) => {
   }
 
   if (request.method === "POST" && url.pathname === "/api/blockchain-refresh") {
-    blockchain.refreshCache().catch(() => {});
+    blockchain.refreshCache().catch(() => { });
     return sendJson(response, 200, { ok: true });
   }
 
@@ -176,7 +181,7 @@ io.on("connection", (socket) => {
       }
       player.socketId = socket.id;
       savePlayers();
-      
+
       socket.join(player.roomId);
       if (callback) callback({ ok: true, player });
     } catch (err) {
@@ -224,7 +229,7 @@ io.on("connection", (socket) => {
 const TICK_RATE = 1000 / 20;
 setInterval(() => {
   const roomStates = {};
-  
+
   // Group players by room
   for (let player of getPlayers()) {
     if (!player.roomId) continue;
