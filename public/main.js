@@ -164,7 +164,7 @@ function getEffectiveProcessSpeedMultiplier() {
 const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.protocol === "file:";
 // Set your active ngrok URL here before uploading to itch.io!
 // Example: "https://1234-abcd.ngrok-free.app"
-export const NGROK_URL = "https://server-tycoon.onrender.com"; 
+export const NGROK_URL = "https://server-tycoon.onrender.com";
 
 let apiRoot = "http://localhost:3000";
 if (!isLocal) {
@@ -176,7 +176,7 @@ if (!isLocal) {
       try {
         saved = prompt("Enter the Server Factory Multiplayer URL (Ngrok or Render URL):", "https://");
         if (saved) localStorage.setItem("serverApiRoot", saved);
-      } catch(e) {
+      } catch (e) {
         // Itch.io might block prompt. In this case, they must hardcode NGROK_URL.
         console.warn("Prompt blocked by iframe. You must set NGROK_URL in main.js.");
       }
@@ -184,7 +184,7 @@ if (!isLocal) {
     apiRoot = saved || "http://localhost:3000";
   }
 } else if (location.hostname && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
-    apiRoot = location.origin;
+  apiRoot = location.origin;
 }
 
 initSocket(apiRoot);
@@ -228,7 +228,7 @@ window.addEventListener("beforeunload", () => {
     headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
     body: payload,
     keepalive: true,
-  }).catch(() => {});
+  }).catch(() => { });
 });
 
 // --- SETUP THREE.JS (PERFORMANCE OPTIMIZED) ---
@@ -522,14 +522,14 @@ try {
     let srvs = pars.filter((d) => d.type === "server");
     if (srvs.length > 0) serverPositions = srvs;
   }
-} catch (e) {}
+} catch (e) { }
 
 // Map Configuration & Head Quarters Setup
 function initMap() {
   let savedMap = null;
   try {
     savedMap = JSON.parse(localStorage.getItem("tycoonMap"));
-  } catch (e) {}
+  } catch (e) { }
 
   let padCoords = [
     { x: -20, z: 30 },
@@ -1415,7 +1415,7 @@ function unlockAudio() {
   }
   const ctx = getAudioContext();
   if (ctx && ctx.state === "suspended") {
-    ctx.resume().catch(() => {});
+    ctx.resume().catch(() => { });
   }
   applyAudioVolumes();
 }
@@ -1436,8 +1436,8 @@ function playSfx(key, cooldownMs = 0) {
 
   try {
     sfx.currentTime = 0;
-    sfx.play().catch(() => {});
-  } catch (_error) {}
+    sfx.play().catch(() => { });
+  } catch (_error) { }
 
   if (key === "walk" || key === "collect") {
     playSynthSfx(key);
@@ -1945,18 +1945,18 @@ playButton.addEventListener("click", () => {
 function hideControlsHint() {
   const hint = document.getElementById("controls-hint");
   if (!hint) return;
-  
+
   console.log("[UI] Starting 8s timer to hide controls hint...");
-  
+
   // Set initial transition
   hint.style.transition = "opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1), transform 1.5s cubic-bezier(0.4, 0, 0.2, 1)";
-  
+
   setTimeout(() => {
     console.log("[UI] Hiding controls hint now.");
     hint.classList.add("hint-hidden");
     // Remove after animation to be sure
-    setTimeout(() => { 
-      if (hint.parentNode) hint.remove(); 
+    setTimeout(() => {
+      if (hint.parentNode) hint.remove();
     }, 2000);
   }, 8000);
 }
@@ -2500,9 +2500,6 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-// Start Engine
-animate();
-
 export {
   addCollider,
   ambientLight,
@@ -2570,6 +2567,9 @@ export {
   updateUI,
   workers
 };
+
+// Start Engine
+animate();
 
 console.log("🚀 SERVER FACTORY 3D: Initialized Successfully.");
 console.log("🔧 Systems: Online | Physics: Active | Audio: Ready");
